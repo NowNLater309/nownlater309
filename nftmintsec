@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+// Import interfaces of external contracts for handling potential errors
+import "./ExternalContract.sol";
+
+contract MyNFT is ERC721, Ownable {
+    // Define variables
+    uint256 public tokenCounter;
+    address public externalContractAddress;
+    ExternalContract public externalContract;
+
+    // Event for minting
+    event NFTMinted(address indexed owner, uint256 indexed tokenId);
+
+    constructor(string memory _name, string memory _symbol, address _externalContractAddress) ERC721(_name, _symbol) {
+        tokenCounter = 0;
+        externalContractAddress = _externalContractAddress;
+        externalContract = ExternalContract(_externalContractAddress); // Initialize the external contract interface
+    }
+
+    // Function to mint NFT
+    function mintNFT(address _to) external onlyOwner {
+        require(_to != address(0), "Invalid address");
+        uint256 newTokenId = tokenCounter;
+        _safeMint(_to, newTokenId);
+        emit NFTMinted(_to, newTokenId);
+        tokenCounter++;
+    }
+
+    // Function to handle external contract calls
+    function handleExternalCall() external onlyOwner {
+        // Perform the external contract call
+        try externalContract.someFunction() {
+            // Handle successful call
+        } catch Error(string memory errorMessage) {
+            // Handle potential error from the external contract
+            revert(errorMessage);
+        } catch {
+            // Fallback for unexpected errors
+            revert("Unknown error occurred");
+        }
+    }
+
+    // Function to update the address of the external contract
+    function updateExternalContractAddress(address _newExternalContractAddress) external onlyOwner {
+        externalContractAddress = _newExternalContractAddress;
+        externalContract = ExternalContract(_newExternalContractAddress); // Update the external contract interface
+    }
+
+    // Function to withdraw funds from the contract
+    function withdraw() external onlyOwner {
+        uint256 balance = address(this).balance;
+        payable(owner()).transfer(balance);
+    }
+}
