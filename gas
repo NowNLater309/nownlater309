@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+contract GasFeeNFT is ERC721 {
+    address public creator;
+
+    constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {
+        creator = msg.sender;
+    }
+
+    // Transfer function overriding to redirect gas fees to creator
+    function _transfer(address from, address to, uint256 tokenId) internal override {
+        uint256 gasUsed = gasleft();
+        super._transfer(from, to, tokenId);
+        uint256 gasSpent = gasUsed - gasleft();
+        payable(creator).transfer(gasSpent * tx.gasprice);
+    }
+}
