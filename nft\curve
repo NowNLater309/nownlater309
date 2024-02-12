@@ -1,0 +1,55 @@
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
+contract BondingCurveNFT is ERC721 {
+    using SafeMath for uint256;
+
+    // Bonding curve parameters
+    uint256 public constant INITIAL_SUPPLY = 1000;
+    uint256 public constant INITIAL_PRICE = 1 ether;
+    uint256 public constant SLOPE_NUMERATOR = 1;
+    uint256 public constant SLOPE_DENOMINATOR = 100;
+
+    // Event emitted upon NFT minting
+    event Mint(address indexed to, uint256 amount);
+
+    constructor(string memory _name, string memory _symbol) ERC721(_name, _symbol) {
+        // Mint initial supply to contract deployer
+        _mint(msg.sender, INITIAL_SUPPLY);
+    }
+
+    // Calculate the minting price based on bonding curve equation
+    function calculateMintPrice(uint256 _amount) public view returns (uint256) {
+        return INITIAL_PRICE.add(getPriceChange(_amount));
+    }
+
+    // Get the change in price for a given amount of tokens
+    function getPriceChange(uint256 _amount) public pure returns (uint256) {
+        return (_amount.mul(SLOPE_NUMERATOR)).div(SLOPE_DENOMINATOR);
+    }
+
+    // Mint NFTs by sending the required amount of cryptocurrency
+    function mint(uint256 _amount) external payable {
+        uint256 price = calculateMintPrice(_amount);
+        require(msg.value >= price, "Insufficient funds");
+
+        // Mint NFTs to the sender
+        _mint(msg.sender, _amount);
+
+        // Emit mint event
+        emit Mint(msg.sender, _amount);
+    }
+
+    // Adjust bonding curve parameters (e.g., slope, initial price)
+    function adjustBondingCurve(uint256 _initialPrice, uint256 _slopeNumerator, uint256 _slopeDenominator) external {
+        require(msg.sender == owner(), "Only owner can adjust the curve");
+        require(_slopeDenominator != 0, "Denominator cannot be zero");
+
+        // Update bonding curve parameters
+        INITIAL_PRICE = _initialPrice;
+        SLOPE_NUMERATOR = _slopeNumerator;
+        SLOPE_DENOMINATOR = _slopeDenominator;
+    }
+}
